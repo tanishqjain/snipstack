@@ -1,0 +1,8 @@
+{
+  "name": "snipstack",
+  "description": "A full-stack code snippet manager with monorepo architecture, Prisma, and JWT auth.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
