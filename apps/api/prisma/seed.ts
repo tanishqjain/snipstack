@@ -4,6 +4,22 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
+  // Add Postgres Full-Text Search Column and Index
+  try {
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "Snippet" ADD COLUMN IF NOT EXISTS "searchVector" tsvector 
+      GENERATED ALWAYS AS (
+        to_tsvector('english', title || ' ' || COALESCE(description, '') || ' ' || content)
+      ) STORED;
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "snippet_search_idx" ON "Snippet" USING GIN ("searchVector");
+    `);
+    console.log('Search vector column and GIN index ensured.');
+  } catch (error) {
+    console.warn('Full-text search indexing setup failed (might already exist or not on Postgres):', error);
+  }
+
   const hashedPassword = await bcrypt.hash('password123', 10);
   
   const user = await prisma.user.upsert({

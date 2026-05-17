@@ -1,17 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Hash, Filter, Plus, Code2 } from 'lucide-react';
+import { Search, Hash, Filter, Plus, Code2, X } from 'lucide-react';
 import debounce from 'lodash/debounce';
 import api from '../lib/api';
 import Layout from '../components/Layout';
 import SnippetCard from '../components/SnippetCard';
 import type { Snippet, Tag } from '@snipstack/shared';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 export default function SnippetListPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   
+  const selectedTag = searchParams.get('tag');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const { data: snippetsData, isLoading: isLoadingSnippets } = useQuery({
@@ -38,6 +39,20 @@ export default function SnippetListPage() {
     []
   );
 
+  const clearTag = () => {
+    searchParams.delete('tag');
+    setSearchParams(searchParams);
+  };
+
+  const selectTag = (tagName: string | null) => {
+    if (!tagName) {
+      searchParams.delete('tag');
+    } else {
+      searchParams.set('tag', tagName);
+    }
+    setSearchParams(searchParams);
+  };
+
   return (
     <Layout user={user}>
       <header className="h-20 border-b border-white/5 bg-black/20 backdrop-blur-xl sticky top-0 z-10 px-8 flex items-center justify-between">
@@ -62,6 +77,28 @@ export default function SnippetListPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* Main Grid */}
         <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
+          {/* Active Filters Bar */}
+          {(selectedTag || search) && (
+            <div className="flex items-center gap-3 mb-8 animate-in fade-in slide-in-from-top-2 duration-300">
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/20 ml-1">Active Filter:</span>
+              {selectedTag && (
+                <button 
+                  onClick={clearTag}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white text-black rounded-lg text-xs font-bold hover:bg-white/80 transition-all group"
+                >
+                  <Hash size={12} className="opacity-40" />
+                  {selectedTag}
+                  <X size={12} className="ml-1 opacity-40 group-hover:opacity-100" />
+                </button>
+              )}
+              {search && (
+                <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-white/60">
+                   Search: "{search}"
+                </div>
+              )}
+            </div>
+          )}
+
           {isLoadingSnippets ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
@@ -87,7 +124,7 @@ export default function SnippetListPage() {
               </p>
               {(search || selectedTag) && (
                 <button 
-                  onClick={() => { setSearch(''); setSelectedTag(null); }}
+                  onClick={() => { setSearch(''); selectTag(null); }}
                   className="mt-6 text-sm text-white hover:underline decoration-1 underline-offset-4"
                 >
                   Clear all filters
@@ -105,9 +142,9 @@ export default function SnippetListPage() {
           </div>
           <div className="space-y-1.5 overflow-y-auto max-h-[calc(100vh-200px)] pr-2 custom-scrollbar">
             <button 
-              onClick={() => setSelectedTag(null)}
+              onClick={() => selectTag(null)}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                !selectedTag ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/60'
+                !selectedTag ? 'bg-white/10 text-white shadow-xl shadow-black/20' : 'text-white/30 hover:text-white/60'
               }`}
             >
               <Hash size={14} className={!selectedTag ? 'opacity-100' : 'opacity-20'} />
@@ -116,9 +153,9 @@ export default function SnippetListPage() {
             {tagsData?.map(tag => (
               <button 
                 key={tag.id}
-                onClick={() => setSelectedTag(tag.name === selectedTag ? null : tag.name)}
+                onClick={() => selectTag(tag.name === selectedTag ? null : tag.name)}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                  selectedTag === tag.name ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/60'
+                  selectedTag === tag.name ? 'bg-white/10 text-white shadow-xl shadow-black/20' : 'text-white/30 hover:text-white/60'
                 }`}
               >
                 <Hash size={14} className={selectedTag === tag.name ? 'opacity-100' : 'opacity-20'} />

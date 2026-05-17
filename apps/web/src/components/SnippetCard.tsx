@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Copy, Check, Clock, Hash } from 'lucide-react';
 import type { Snippet } from '@snipstack/shared';
@@ -7,13 +7,24 @@ import { useState } from 'react';
 
 export default function SnippetCard({ snippet }: { snippet: Snippet }) {
   const [copied, setCopied] = useState(false);
+  const navigate = useNavigate();
 
   const handleCopy = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    navigator.clipboard.writeText(snippet.content);
+    
+    const commentChar = ['python', 'ruby', 'shell', 'bash'].includes(snippet.language) ? '#' : '//';
+    const contentToCopy = `${commentChar} ${snippet.language}\n${snippet.content}`;
+    
+    navigator.clipboard.writeText(contentToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleTagClick = (e: React.MouseEvent, tagName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate(`/?tag=${encodeURIComponent(tagName)}`);
   };
 
   const preview = snippet.content.split('\n').slice(0, 3).join('\n');
@@ -42,9 +53,16 @@ export default function SnippetCard({ snippet }: { snippet: Snippet }) {
           
           <button 
             onClick={handleCopy}
-            className="absolute top-6 right-6 p-2 bg-white/5 border border-white/10 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all opacity-0 group-hover:opacity-100"
+            className="absolute top-6 right-6 p-2 bg-white/10 border border-white/10 rounded-xl text-white/40 hover:text-white hover:bg-white/20 transition-all opacity-0 group-hover:opacity-100 flex items-center gap-2"
           >
-            {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+            {copied ? (
+              <>
+                <Check size={14} className="text-green-400" />
+                <span className="text-[10px] font-bold">Copied!</span>
+              </>
+            ) : (
+              <Copy size={14} />
+            )}
           </button>
         </div>
 
@@ -62,10 +80,14 @@ export default function SnippetCard({ snippet }: { snippet: Snippet }) {
 
         <div className="mt-auto flex flex-wrap gap-2">
           {snippet.tags?.map(tag => (
-            <span key={tag.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/[0.02] border border-white/5 rounded-full text-[10px] font-medium text-white/30">
+            <button 
+              key={tag.id} 
+              onClick={(e) => handleTagClick(e, tag.name)}
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/[0.02] border border-white/5 rounded-full text-[10px] font-medium text-white/30 hover:text-white hover:bg-white/10 transition-colors"
+            >
               <Hash size={10} className="opacity-50" />
               {tag.name}
-            </span>
+            </button>
           ))}
         </div>
       </Link>

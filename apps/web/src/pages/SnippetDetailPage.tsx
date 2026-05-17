@@ -11,7 +11,9 @@ import {
   Calendar,
   Code
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import CodeMirror from '@uiw/react-codemirror';
+// ... rest of imports unchanged ...
 import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
 import { html } from '@codemirror/lang-html';
@@ -50,17 +52,28 @@ export default function SnippetDetailPage() {
   const deleteMutation = useMutation({
     mutationFn: async () => api.delete(`/snippets/${id}`),
     onSuccess: () => {
+      toast.success('Snippet removed from stack');
       queryClient.invalidateQueries({ queryKey: ['snippets'] });
       navigate('/');
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'Failed to delete snippet');
     }
   });
 
   const handleCopy = () => {
     if (!snippet) return;
-    navigator.clipboard.writeText(snippet.content);
+    
+    const commentChar = ['python', 'ruby', 'shell', 'bash'].includes(snippet.language) ? '#' : '//';
+    const contentToCopy = `${commentChar} ${snippet.language}\n${snippet.content}`;
+    
+    navigator.clipboard.writeText(contentToCopy);
     setCopied(true);
+    toast.success('Copied to clipboard');
     setTimeout(() => setCopied(false), 2000);
   };
+// ... rest of component logic unchanged ...
+
 
   if (isLoading) return <Layout user={user}><div className="p-20 text-center animate-pulse text-white/30 font-bold uppercase tracking-widest text-xs">Accessing Data...</div></Layout>;
   if (!snippet) return <Layout user={user}><div className="p-20 text-center text-red-400 font-bold">Snippet not found.</div></Layout>;

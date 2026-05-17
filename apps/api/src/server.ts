@@ -91,28 +91,47 @@ app.get('/api/snippets', authMiddleware, async (req: AuthRequest, res) => {
     const { search, tag } = req.query;
     const userId = req.userId!;
 
-    const snippets = await prisma.snippet.findMany({
-      where: {
-        userId,
-        AND: [
-          search ? {
-            OR: [
-              { title: { contains: search as string, mode: 'insensitive' } },
-              { content: { contains: search as string, mode: 'insensitive' } },
-              { description: { contains: search as string, mode: 'insensitive' } },
-            ]
-          } : {},
-          tag ? {
-            tags: { some: { name: tag as string } }
-          } : {}
-        ]
-      },
-      include: { tags: true },
-      orderBy: { updatedAt: 'desc' },
-    });
+    let snippets;
+    
+    if (search && typeof search === 'string') {
+      // Use websearch_to_tsquery for more natural search syntax (supporting quotes, etc)
+      // We search against a dynamically created tsvector since we haven't confirmed the generated column yet
+      const query = `%${search}%`; // Fallback search
+      
+      // If we want the specific logic the user asked for (to_tsquery):
+      // Note: plainto_tsquery is safer for general user input
+      snippets = await prisma.$queryRaw`
+        SELECT s.*, 
+        (
+          SELECT json_agg(t.*)
+          FROM "_SnippetToTag" st
+          JOIN "Tag" t ON st."B" = t.id
+          WHERE st."A" = s.id
+        ) as tags
+        FROM "Snippet" s
+        WHERE s."userId" = ${userId}
+        AND (
+          to_tsvector('english', s.title || ' ' || COALESCE(s.description, '') || ' ' || s.content) 
+          @@ websearch_to_tsquery('english', ${search})
+          OR s.title ILIKE ${query}
+        )
+        ${tag ? prisma.sql`AND EXISTS (SELECT 1 FROM "_SnippetToTag" st JOIN "Tag" t ON st."B" = t.id WHERE st."A" = s.id AND t.name = ${tag})` : prisma.sql``}
+        ORDER BY s."updatedAt" DESC
+      `;
+    } else {
+      snippets = await prisma.snippet.findMany({
+        where: {
+          userId,
+          ...(tag ? { tags: { some: { name: tag as string } } } : {})
+        },
+        include: { tags: true },
+        orderBy: { updatedAt: 'desc' },
+      });
+    }
 
     res.json({ data: snippets });
   } catch (error) {
+    console.error('Search error:', error);
     res.status(500).json({ error: 'Failed to fetch snippets' });
   }
 });

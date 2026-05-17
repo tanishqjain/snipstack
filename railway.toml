@@ -1,0 +1,14 @@
+[build]
+builder = "docker"
+dockerfilePath = "apps/api/Dockerfile"
+
+[deploy]
+startCommand = "npx prisma migrate deploy && node apps/api/dist/server.js"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+
+[[services]]
+name = "web"
+dockerfilePath = "apps/web/Dockerfile"
+# Note: In Railway you'd typically link this to the API service URL

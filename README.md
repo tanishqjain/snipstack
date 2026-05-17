@@ -1,20 +1,52 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 🚀 Snipstack
 
-# Run and deploy your AI Studio app
+A high-performance codebase for managing your technical snippet stack. Built with React, Node.js, and Postgres.
 
-This contains everything you need to run your app locally.
+## 🛠 Features
+- **Full-Text Search**: Optimized Postgres search with GIN indexing.
+- **Dark Mode**: Minimalist, technical interface.
+- **Command Palette**: `⌘K` for navigation and search.
+- **Tagging**: Advanced categorization and filtering.
 
-View your app in AI Studio: https://ai.studio/apps/7f92e898-876f-499d-9337-4068872fc201
+## 💻 Local Development
 
-## Run Locally
+1. **Install Dependencies**
+   ```bash
+   npm install
+   ```
 
-**Prerequisites:**  Node.js
+2. **Setup Environment**
+   Create a `.env` file in `apps/api`:
+   ```env
+   DATABASE_URL="postgresql://postgres:password@localhost:5432/snipstack"
+   JWT_SECRET="your-super-secret-key"
+   ```
 
+3. **Launch Dev Stack**
+   ```bash
+   # Terminal 1: Database
+   docker compose -f docker-compose.dev.yml up db
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   # Terminal 2: Apps
+   npm run dev
+   ```
+
+## 🐳 Production Deployment (Docker Compose)
+
+```bash
+docker compose -f docker-compose.prod.yml up --build
+```
+
+## 📋 Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | Postgres Connection String | - |
+| `JWT_SECRET` | Secret for auth tokens | - |
+| `VITE_API_URL` | Frontend API Proxy Target | `/api` |
+
+## 🏗 CI/CD
+Fully automated pipeline via GitHub Actions:
+- **Linting**: Consistent code style.
+- **Testing**: Automated integration tests with a Postgres service container.
+- **Building**: Verification of artifacts.

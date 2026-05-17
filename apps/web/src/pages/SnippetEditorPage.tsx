@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Save, ChevronLeft, Hash, X, Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
 import CodeMirror from '@uiw/react-codemirror';
+// ... rest of imports unchanged ...
+// NOTE: I'll include full imports to be safe with tool matching
 import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
 import { html } from '@codemirror/lang-html';
@@ -14,6 +17,7 @@ import Layout from '../components/Layout';
 import type { Snippet, Tag } from '@snipstack/shared';
 
 const LANGUAGES = [
+// ... unchanged LANGUAGES array ...
   { label: 'Plain Text', value: 'plaintext', ext: [] },
   { label: 'JavaScript', value: 'javascript', ext: [javascript()] },
   { label: 'TypeScript', value: 'typescript', ext: [javascript({ typescript: true })] },
@@ -24,6 +28,7 @@ const LANGUAGES = [
 ];
 
 export default function SnippetEditorPage() {
+// ... unchanged component state ...
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -79,21 +84,27 @@ export default function SnippetEditorPage() {
     onSuccess: async (response) => {
       const snippetId = id || response.data.data.id;
       
-      // Update tags association
-      // In a real app, you might do this in a single transaction in backend
-      // But based on requested routes, we have attachment endpoints
       const currentTags = existingSnippet?.tags?.map(t => t.id) || [];
       const tagsToAdd = selectedTagIds.filter(tid => !currentTags.includes(tid));
       const tagsToRemove = currentTags.filter(tid => !selectedTagIds.includes(tid));
 
-      await Promise.all([
-        ...tagsToAdd.map(tid => api.post(`/snippets/${snippetId}/tags/${tid}`)),
-        ...tagsToRemove.map(tid => api.delete(`/snippets/${snippetId}/tags/${tid}`))
-      ]);
+      try {
+        await Promise.all([
+          ...tagsToAdd.map(tid => api.post(`/snippets/${snippetId}/tags/${tid}`)),
+          ...tagsToRemove.map(tid => api.delete(`/snippets/${snippetId}/tags/${tid}`))
+        ]);
+      } catch (err) {
+        console.error('Tag sync failed', err);
+      }
 
+      toast.success(id ? 'Snippet updated' : 'Snippet stacked!');
       queryClient.invalidateQueries({ queryKey: ['snippets'] });
       queryClient.invalidateQueries({ queryKey: ['snippet', snippetId] });
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
       navigate(`/snippets/${snippetId}`);
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'Failed to save snippet');
     }
   });
 
@@ -103,11 +114,17 @@ export default function SnippetEditorPage() {
       return res.data.data as Tag;
     },
     onSuccess: (newTag) => {
+      toast.success(`Tag #${newTag.name} created`);
       queryClient.invalidateQueries({ queryKey: ['tags'] });
       setSelectedTagIds([...selectedTagIds, newTag.id]);
       setNewTagName('');
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'Failed to create tag');
     }
   });
+// ... rest of component logic unchanged ...
+
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();

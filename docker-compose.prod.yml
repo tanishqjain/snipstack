@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: snipstack-db-prod
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-snipstack}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: snipstack-api-prod
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-snipstack}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: /api
+    container_name: snipstack-web-prod
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: always
+
+volumes:
+  postgres_data:
