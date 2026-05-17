@@ -50,7 +50,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
+      return res.status(400).json({ error: 'User already exists', message: 'User already exists' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -65,7 +65,10 @@ app.post('/api/auth/register', async (req, res) => {
     const token = jwt.sign({ userId: user.id }, JWT_SECRET);
     res.json({ data: { user: { id: user.id, email: user.email, name: user.name }, token } });
   } catch (error) {
-    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+    res.status(400).json({ 
+      error: error instanceof Error ? error.message : 'Invalid request',
+      message: error instanceof Error ? error.message : 'Invalid request'
+    });
   }
 });
 
@@ -75,13 +78,13 @@ app.post('/api/auth/login', async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Invalid credentials', message: 'Invalid credentials' });
     }
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET);
     res.json({ data: { user: { id: user.id, email: user.email, name: user.name }, token } });
   } catch (error) {
-    res.status(400).json({ error: 'Invalid request' });
+    res.status(400).json({ error: 'Invalid request', message: 'Invalid request' });
   }
 });
 
@@ -111,8 +114,7 @@ app.get('/api/snippets', authMiddleware, async (req: AuthRequest, res) => {
         FROM "Snippet" s
         WHERE s."userId" = ${userId}
         AND (
-          to_tsvector('english', s.title || ' ' || COALESCE(s.description, '') || ' ' || s.content) 
-          @@ websearch_to_tsquery('english', ${search})
+          s."searchVector" @@ websearch_to_tsquery('english', ${search})
           OR s.title ILIKE ${query}
         )
         ${tag ? prisma.sql`AND EXISTS (SELECT 1 FROM "_SnippetToTag" st JOIN "Tag" t ON st."B" = t.id WHERE st."A" = s.id AND t.name = ${tag})` : prisma.sql``}
@@ -132,7 +134,7 @@ app.get('/api/snippets', authMiddleware, async (req: AuthRequest, res) => {
     res.json({ data: snippets });
   } catch (error) {
     console.error('Search error:', error);
-    res.status(500).json({ error: 'Failed to fetch snippets' });
+    res.status(500).json({ error: 'Failed to fetch snippets', message: 'Failed to fetch snippets' });
   }
 });
 
@@ -148,7 +150,7 @@ app.post('/api/snippets', authMiddleware, async (req: AuthRequest, res) => {
     });
     res.json({ data: snippet });
   } catch (error) {
-    res.status(400).json({ error: 'Invalid snippet data' });
+    res.status(400).json({ error: 'Invalid snippet data', message: 'Invalid snippet data' });
   }
 });
 
@@ -158,10 +160,10 @@ app.get('/api/snippets/:id', authMiddleware, async (req: AuthRequest, res) => {
       where: { id: req.params.id, userId: req.userId },
       include: { tags: true },
     });
-    if (!snippet) return res.status(404).json({ error: 'Snippet not found' });
+    if (!snippet) return res.status(404).json({ error: 'Snippet not found', message: 'Snippet not found' });
     res.json({ data: snippet });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch snippet' });
+    res.status(500).json({ error: 'Failed to fetch snippet', message: 'Failed to fetch snippet' });
   }
 });
 
@@ -172,7 +174,7 @@ app.put('/api/snippets/:id', authMiddleware, async (req: AuthRequest, res) => {
       where: { id: req.params.id, userId: req.userId },
       data,
     });
-    if (snippet.count === 0) return res.status(404).json({ error: 'Snippet not found' });
+    if (snippet.count === 0) return res.status(404).json({ error: 'Snippet not found', message: 'Snippet not found' });
     
     const updated = await prisma.snippet.findUnique({ 
       where: { id: req.params.id },
@@ -180,7 +182,7 @@ app.put('/api/snippets/:id', authMiddleware, async (req: AuthRequest, res) => {
     });
     res.json({ data: updated });
   } catch (error) {
-    res.status(400).json({ error: 'Invalid update data' });
+    res.status(400).json({ error: 'Invalid update data', message: 'Invalid update data' });
   }
 });
 
@@ -189,10 +191,10 @@ app.delete('/api/snippets/:id', authMiddleware, async (req: AuthRequest, res) =>
     const result = await prisma.snippet.deleteMany({
       where: { id: req.params.id, userId: req.userId },
     });
-    if (result.count === 0) return res.status(404).json({ error: 'Snippet not found' });
+    if (result.count === 0) return res.status(404).json({ error: 'Snippet not found', message: 'Snippet not found' });
     res.json({ message: 'Snippet deleted' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete snippet' });
+    res.status(500).json({ error: 'Failed to delete snippet', message: 'Failed to delete snippet' });
   }
 });
 

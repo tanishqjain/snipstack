@@ -7,13 +7,12 @@ ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
 COPY package*.json ./
-COPY turbo.json ./
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
 RUN npm install
-RUN npm run build --filter=@snipstack/shared
-RUN npm run build --filter=@snipstack/web
+RUN npm run build -w packages/shared
+RUN npm run build -w apps/web
 
 # Nginx stage
 FROM nginx:alpine

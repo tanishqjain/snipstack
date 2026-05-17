@@ -5,7 +5,6 @@ WORKDIR /app
 
 # Copy root configurations
 COPY package*.json ./
-COPY turbo.json ./
 
 # Copy workspace packages
 COPY packages/shared ./packages/shared
@@ -15,7 +14,7 @@ COPY apps/api ./apps/api
 RUN npm install
 
 # Build shared package and api
-RUN npm run build --filter=@snipstack/shared
+RUN npm run build -w packages/shared
 RUN cd apps/api && npx prisma generate && npm run build
 
 # Production stage
